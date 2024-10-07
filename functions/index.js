@@ -45,7 +45,7 @@ exports.sendEmails = onRequest((req, res) => {
                 to: recipientEmail,
                 subject: subject,
                 // html: `<p>${message}</p><img src="${imageUrl}" alt="Image"/>`,
-                html: `
+                html: `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -57,7 +57,7 @@ exports.sendEmails = onRequest((req, res) => {
 <p style="margin: 30px; color: #777777;">${message}</p>
 <div style="padding: 20px; text-align: center; background-color: #f0f0f0;">
 
-    <div style="margin: 20px auto; padding: 20px; background: linear-gradient(to right, #002F72, #A5B4CB); color: white; border-radius: 10px; width: 90%; max-width: 600px;">
+    <div style="margin: 36px auto; padding: 36px; background: url('https://firebasestorage.googleapis.com/v0/b/oozf-aaff4.appspot.com/o/WhatsApp%20Image%202024-10-07%20at%2023.13.18_32ed0e9b.jpg?alt=media&token=bcf9f30b-f443-4b44-afb9-5907b4d1e019') no-repeat center center; background-size: cover; color: white; border-radius: 10px; width: 90%; max-width: 600px;">
         <h2>AI Masaood Stars Awards 2024</h2>
         <p>@ Abu Dhabi, ADNEC, Hall 11</p>
         <p>4:00pm - 9:00pm</p>
