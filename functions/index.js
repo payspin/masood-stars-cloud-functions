@@ -28,10 +28,8 @@ exports.sendEmails = onRequest((req, res) => {
             return;
         }
 
-        const {senderName, subject, message, email: recipientEmail, imageUrl} = req.body;
+        const {senderName, subject, message, email: recipientEmail, imageUrl, phone, userName, colorCode} = req.body;
 
-        const color = '#777777';
-        const emptyStringColor = '    \n     '
         // Validate required fields
         if (!senderName || !subject || !message || !recipientEmail || !imageUrl) {
             res.status(400).send('Bad Request: Missing senderName, subject, message, email, or imageUrl.');
@@ -44,12 +42,11 @@ exports.sendEmails = onRequest((req, res) => {
                 from: `${senderName} <${gmailEmail}>`,
                 to: recipientEmail,
                 subject: subject,
-                // html: `<p>${message}</p><img src="${imageUrl}" alt="Image"/>`,
-                html: `<!DOCTYPE html>
-<html lang="en">
+                html: `<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light">
     <title>Event Invitation</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: Arial, sans-serif;">
@@ -58,16 +55,16 @@ exports.sendEmails = onRequest((req, res) => {
 <div style="padding: 20px; text-align: center; background-color: #f0f0f0;">
 
     <div style="margin: 36px auto; padding: 36px; background: url('https://firebasestorage.googleapis.com/v0/b/oozf-aaff4.appspot.com/o/WhatsApp%20Image%202024-10-07%20at%2023.13.18_32ed0e9b.jpg?alt=media&token=bcf9f30b-f443-4b44-afb9-5907b4d1e019') no-repeat center center; background-size: cover; color: white; border-radius: 10px; width: 90%; max-width: 600px;">
-        <h2>AI Masaood Stars Awards 2024</h2>
+        <h2>Masaood Stars Awards 2024</h2>
         <p>@ Abu Dhabi, ADNEC, Hall 11</p>
-        <p>4:00pm - 9:00pm</p>
-        <p>November 11, 2024</p>
+        <p>3:00pm - 9:00pm</p>
+        <p>November 10, 2024</p>
         <div style="background-color: #ffffff; color: #000000; padding: 10px; margin-top: 20px; border-radius: 5px;">
-            <p><strong>Name: </strong> Eslam Faisal</p>
-            <p><strong>Employee Number: </strong> 01067457665</p>
+            <p><strong>Name: </strong>${userName}</p>
+            <p><strong>Employee Number: </strong> ${phone}</p>
             <div style="text-align: center; margin-top: 10px;">
-                <strong>Color code: </strong>
-                <span style="display: inline-block; width: 30px; height: 30px; background-color: #002F72; margin-left: 10px;"></span>
+                <strong  style="margin-bottom: 10px;">Color code: </strong>
+                <span style="display: inline-block; width: 30px; height: 30px; background-color: ${colorCode}; margin-left: 10px; margin-bottom: -10px;"></span>
             </div>
             <p style="margin-top: 20px;">
                 <img src="${imageUrl}"
