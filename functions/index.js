@@ -28,7 +28,7 @@ exports.sendEmails = onRequest((req, res) => {
             return;
         }
 
-        const {senderName, subject, message, email: recipientEmail, imageUrl, employeeNumber, userName, colorCode} = req.body;
+        const {senderName, subject, message, email: recipientEmail, imageUrl, employeeNumber, userName} = req.body;
 
         // Validate required fields
         if (!senderName || !subject || !message || !recipientEmail || !imageUrl) {
@@ -53,17 +53,13 @@ exports.sendEmails = onRequest((req, res) => {
 
 <p style="margin: 16px; color: #777777;">${message}</p>
 <div style="padding: 36px; text-align: center; background: url('https://firebasestorage.googleapis.com/v0/b/oozf-aaff4.appspot.com/o/WhatsApp%20Image%202024-10-07%20at%2023.13.18_32ed0e9b.jpg?alt=media&token=bcf9f30b-f443-4b44-afb9-5907b4d1e019') no-repeat center center; background-size: cover; color: white; border-radius: 10px; width: 90%; max-width: 600px;">
-    <h2>Masaood Stars Awards 2024</h2>
-    <p>@ Abu Dhabi, ADNEC, Hall 11</p>
-    <p>3:00pm - 9:00pm</p>
-    <p>November 10, 2024</p>
+    <h2>Masaood Stars Awards</h2>
+    <p>@ Abu Dhabi, ADNEC, Hall 11, Parking B</p>
+    <p>Program starts at 3:00pm</p>
+    <h2>Sunday 10 November 2024</h2>
     <div style="background-color: #ffffff; color: #000000; padding: 10px; margin-top: 20px; border-radius: 5px;">
         <p><strong>Name: </strong>${userName}</p>
         <p><strong>Employee Number: </strong> ${employeeNumber}</p>
-        <div style="text-align: center; margin-top: 10px;">
-            <strong  style="margin-bottom: 10px;">Color code: </strong>
-            <span style="display: inline-block; width: 30px; height: 30px; background-color: ${colorCode}; margin-left: 10px; margin-bottom: -10px;"></span>
-        </div>
         <p style="margin-top: 20px;">
             <img src="${imageUrl}"
                  alt="QRCode"/>
