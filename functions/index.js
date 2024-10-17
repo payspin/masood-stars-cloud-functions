@@ -2,6 +2,7 @@ const {onRequest} = require('firebase-functions/v2/https');
 const logger = require('firebase-functions/logger');
 const cors = require('cors');
 const nodemailer = require('nodemailer');
+const QRCode = require('qrcode');
 
 // Use CORS
 const corsHandler = cors({origin: true});
@@ -28,16 +29,22 @@ exports.sendEmails = onRequest((req, res) => {
             return;
         }
 
-        const {senderName, subject, message, email: recipientEmail, imageUrl, employeeNumber, userName} = req.body;
+        const {senderName, subject, message, email: recipientEmail, userName} = req.body;
 
         // Validate required fields
-        if (!senderName || !subject || !message || !recipientEmail || !imageUrl) {
-            res.status(400).send('Bad Request: Missing senderName, subject, message, email, or imageUrl.');
+        if (!senderName || !subject || !message || !recipientEmail) {
+            res.status(400).send('Bad Request: Missing senderName, subject, message, or email.');
             return;
         }
 
         try {
-            // Set up mail options with the image URL embedded in the HTML
+            // Generate QR code from the recipient email
+            const qrCodeDataURL = await QRCode.toDataURL(recipientEmail);
+
+            // Convert base64 QR code to buffer for attachment
+            const qrCodeBuffer = Buffer.from(qrCodeDataURL.split(',')[1], 'base64');
+
+            // Set up mail options with the QR code attached and embedded in HTML
             const mailOptions = {
                 from: `${senderName} <${gmailEmail}>`,
                 to: recipientEmail,
@@ -55,19 +62,23 @@ exports.sendEmails = onRequest((req, res) => {
 <div style="padding: 36px; text-align: center; background: url('https://firebasestorage.googleapis.com/v0/b/oozf-aaff4.appspot.com/o/WhatsApp%20Image%202024-10-07%20at%2023.13.18_32ed0e9b.jpg?alt=media&token=bcf9f30b-f443-4b44-afb9-5907b4d1e019') no-repeat center center; background-size: cover; color: white; border-radius: 10px; width: 90%; max-width: 600px;">
     <h2>Masaood Stars Awards</h2>
     <p>@ Abu Dhabi, ADNEC, Hall 11, Parking B</p>
-    <p>Program starts at 3:00pm</p>
-    <h2>Sunday 10 November 2024</h2>
+    <p>Doors open at 2:15pm, Program starts at 3:00pm</p>
+    <p>Sunday 10 November 2024</p>
     <div style="background-color: #ffffff; color: #000000; padding: 10px; margin-top: 20px; border-radius: 5px;">
         <p><strong>Name: </strong>${userName}</p>
-        <p><strong>Employee Number: </strong> ${employeeNumber}</p>
         <p style="margin-top: 20px;">
-            <img src="${imageUrl}"
-                 alt="QRCode"/>
+            <img src="cid:qrcode" alt="QRCode"/>
         </p>
     </div>
 </div>
 </body>
-</html>`,
+</html>`, attachments: [
+                    {
+                        filename: 'qrcode.png',
+                        content: qrCodeBuffer,
+                        cid: 'qrcode', // same cid as in the HTML content above
+                    },
+                ],
             };
 
             // Send the email
