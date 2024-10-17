@@ -1,8 +1,16 @@
+const {initializeApp} = require('firebase-admin/app');
 const {onRequest} = require('firebase-functions/v2/https');
 const logger = require('firebase-functions/logger');
 const cors = require('cors');
 const nodemailer = require('nodemailer');
 const QRCode = require('qrcode');
+const {writeFileSync, readFileSync} = require('fs');
+const path = require("path");
+const {getStorage} = require("firebase-admin/storage");
+const {getFirestore} = require("firebase-admin/firestore");
+
+// Initialize Firebase app
+initializeApp();
 
 // Use CORS
 const corsHandler = cors({origin: true});
@@ -43,6 +51,35 @@ exports.sendEmails = onRequest((req, res) => {
 
             // Convert base64 QR code to buffer for attachment
             const qrCodeBuffer = Buffer.from(qrCodeDataURL.split(',')[1], 'base64');
+
+            // Save the QR code image to local filesystem as a PNG
+            const qrCodeFilePath = path.join('/tmp', 'qrcode.png');
+            writeFileSync(qrCodeFilePath, qrCodeBuffer);
+
+            // Upload QR code image and PDF to Firebase Storage
+            const bucket = getStorage().bucket();
+            const [file] = await bucket.upload(qrCodeFilePath, {
+                destination: `qrCodes/${recipientEmail}_qrcode.png`,
+                metadata: {
+                    contentType: 'image/png',
+                },
+            });
+
+            // Generate a signed URL for the uploaded QR code image
+            const [signedUrl] = await file.getSignedUrl({
+                action: 'read',
+                expires: '03-01-2500', // Set expiration far into the future or adjust as needed
+            });
+
+            // Get Firestore instance
+            const db = getFirestore();
+
+            // Query user document by email
+            const userSnapshot = await db.collection('users').where('email', '==', recipientEmail).get();
+            if (!userSnapshot.empty) {
+                const userDoc = userSnapshot.docs[0];
+                await userDoc.ref.update({qrCodeUrl: signedUrl});
+            }
 
             // Set up mail options with the QR code attached and embedded in HTML
             const mailOptions = {
