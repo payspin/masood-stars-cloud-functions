@@ -4,10 +4,11 @@ const logger = require('firebase-functions/logger');
 const cors = require('cors');
 const nodemailer = require('nodemailer');
 const QRCode = require('qrcode');
-const {writeFileSync, readFileSync} = require('fs');
+const {writeFileSync} = require('fs');
 const path = require("path");
 const {getStorage} = require("firebase-admin/storage");
 const {getFirestore} = require("firebase-admin/firestore");
+const { v4: uuidv4 } = require('uuid');
 
 // Initialize Firebase app
 initializeApp();
@@ -58,18 +59,22 @@ exports.sendEmails = onRequest((req, res) => {
 
             // Upload QR code image and PDF to Firebase Storage
             const bucket = getStorage().bucket();
+            const randomToken = uuidv4();  // Generate a random token
+
             const [file] = await bucket.upload(qrCodeFilePath, {
                 destination: `qrCodes/${recipientEmail}_qrcode.png`,
                 metadata: {
                     contentType: 'image/png',
+                    metadata: {
+                        firebaseStorageDownloadTokens: randomToken,  // Attach random token to the file
+                    },
                 },
+                predefinedAcl: 'publicRead',  // Make the file publicly readable
             });
 
-            // Generate a signed URL for the uploaded QR code image
-            const [signedUrl] = await file.getSignedUrl({
-                action: 'read',
-                expires: '03-01-2500', // Set expiration far into the future or adjust as needed
-            });
+            https://firebasestorage.googleapis.com/v0/b/oozf-aaff4.appspot.com/o/qrCodes%2Feslamfaisal423%40gmail.com_qrcode.png?alt=media&token=c5d5dc43-22ba-4a00-96bc-839006eb7b55
+            // Construct the public URL with the token
+            const qrCodeUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(file.name)}?alt=media&token=${randomToken}`;
 
             // Get Firestore instance
             const db = getFirestore();
@@ -78,7 +83,7 @@ exports.sendEmails = onRequest((req, res) => {
             const userSnapshot = await db.collection('users').where('email', '==', recipientEmail).get();
             if (!userSnapshot.empty) {
                 const userDoc = userSnapshot.docs[0];
-                await userDoc.ref.update({qrCodeUrl: signedUrl});
+                await userDoc.ref.update({ qrCodeUrl: qrCodeUrl });
             }
 
             // Set up mail options with the QR code attached and embedded in HTML
@@ -109,7 +114,8 @@ exports.sendEmails = onRequest((req, res) => {
     </div>
 </div>
 </body>
-</html>`, attachments: [
+</html>`,
+                attachments: [
                     {
                         filename: 'qrcode.png',
                         content: qrCodeBuffer,
