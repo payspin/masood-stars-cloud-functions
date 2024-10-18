@@ -216,7 +216,7 @@ exports.convertHtmlToPdf = onRequest({
             // Generate the PDF as a buffer
             const pdfBuffer = await page.pdf({
                 width: '19cm',     // Fixed width (A4 width)
-                height: '20cm',    // Fixed height (A4 height)
+                height: '19cm',    // Fixed height (A4 height)
                 printBackground: true,
                 margin: {
                     top: '1cm',
