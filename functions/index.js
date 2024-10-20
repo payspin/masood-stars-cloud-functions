@@ -226,6 +226,12 @@ exports.sendCancelationEmail = onRequest(async (req, res) => {
             // Send the email
             await transporter.sendMail(mailOptions);
             logger.info('Email sent successfully.');
+
+            // Respond with success message and PDF URL
+            res.status(200).send({
+                message: 'Cancelation Email sent successfully',
+            });
+
         } catch (error) {
             logger.error('Error sending email or generating PDF:', error);
             res.status(500).send('Error sending email or generating PDF');
