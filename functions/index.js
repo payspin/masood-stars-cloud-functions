@@ -28,12 +28,8 @@ const gmailPassword = 'vbwj vjhr wmor wkpo';
 
 // Create a transporter object using nodemailer
 const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    host: 'smtp.gmail.com',
-    port: 465,
-    auth: {
-        user: gmailEmail,
-        pass: gmailPassword,
+    service: 'gmail', host: 'smtp.gmail.com', port: 465, auth: {
+        user: gmailEmail, pass: gmailPassword,
     },
 });
 
@@ -47,7 +43,7 @@ exports.sendEmailOnyl = onRequest({
             return;
         }
 
-        const { senderName, subject, message, email: recipientEmail, userName } = req.body;
+        const {senderName, subject, message, email: recipientEmail, userName} = req.body;
 
         // Validate required fields
         if (!senderName || !subject || !message || !recipientEmail || !userName) {
@@ -69,14 +65,11 @@ exports.sendEmailOnyl = onRequest({
             const randomToken = uuidv4();  // Generate a random token
 
             const [file] = await bucket.upload(qrCodeFilePath, {
-                destination: `qrCodes/${recipientEmail}_qrcode.png`,
-                metadata: {
-                    contentType: 'image/png',
-                    metadata: {
+                destination: `qrCodes/${recipientEmail}_qrcode.png`, metadata: {
+                    contentType: 'image/png', metadata: {
                         firebaseStorageDownloadTokens: randomToken,  // Attach random token to the file
                     },
-                },
-                predefinedAcl: 'publicRead',  // Make the file publicly readable
+                }, predefinedAcl: 'publicRead',  // Make the file publicly readable
             });
 
             // Construct the public URL with the token
@@ -110,26 +103,20 @@ exports.sendEmailOnyl = onRequest({
 
             // Launch Puppeteer using chrome-aws-lambda
             const browser = await puppeteer.launch({
-                args: chrome.args,
-                executablePath: await chrome.executablePath,
-                headless: chrome.headless,
+                args: chrome.args, executablePath: await chrome.executablePath, headless: chrome.headless,
             });
 
             const page = await browser.newPage();
 
             // Set the HTML content for the PDF
-            await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+            await page.setContent(htmlContent, {waitUntil: 'networkidle0'});
 
             // Generate the PDF as a buffer
             const pdfBuffer = await page.pdf({
                 width: '19cm',     // Fixed width (A4 width)
                 height: '19cm',    // Fixed height (A4 height)
-                printBackground: true,
-                margin: {
-                    top: '1cm',
-                    right: '1cm',
-                    bottom: '1cm',
-                    left: '1cm',
+                printBackground: true, margin: {
+                    top: '1cm', right: '1cm', bottom: '1cm', left: '1cm',
                 },
             });
 
@@ -142,14 +129,11 @@ exports.sendEmailOnyl = onRequest({
             // Upload the PDF to Firebase Storage
             const pdfToken = uuidv4();  // Generate a random token for the PDF file
             const [pdfFile] = await bucket.upload(pdfFilePath, {
-                destination: `pdfs/${recipientEmail}_invitation.pdf`,
-                metadata: {
-                    contentType: 'application/pdf',
-                    metadata: {
+                destination: `pdfs/${recipientEmail}_invitation.pdf`, metadata: {
+                    contentType: 'application/pdf', metadata: {
                         firebaseStorageDownloadTokens: pdfToken,  // Attach random token to the file
                     },
-                },
-                predefinedAcl: 'publicRead',  // Make the file publicly readable
+                }, predefinedAcl: 'publicRead',  // Make the file publicly readable
             });
 
             // Construct the public URL for the PDF
@@ -167,10 +151,7 @@ exports.sendEmailOnyl = onRequest({
 
             // Set up mail options with the QR code attached and embedded in HTML
             const mailOptions = {
-                from: `${senderName} <${gmailEmail}>`,
-                to: recipientEmail,
-                subject: subject,
-                html: `<html lang="en">
+                from: `${senderName} <${gmailEmail}>`, to: recipientEmail, subject: subject, html: `<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -194,14 +175,9 @@ exports.sendEmailOnyl = onRequest({
     </div>
 </div>
 </body>
-</html>`,
-                attachments: [
-                    {
-                        filename: 'qrcode.png',
-                        content: qrCodeBuffer,
-                        cid: 'qrcode', // same cid as in the HTML content above
-                    },
-                ],
+</html>`, attachments: [{
+                    filename: 'qrcode.png', content: qrCodeBuffer, cid: 'qrcode', // same cid as in the HTML content above
+                },],
             };
 
             // Send the email
@@ -215,6 +191,41 @@ exports.sendEmailOnyl = onRequest({
                 qrCodeUrl: qrCodeUrl,
             });
 
+        } catch (error) {
+            logger.error('Error sending email or generating PDF:', error);
+            res.status(500).send('Error sending email or generating PDF');
+        }
+    });
+});
+
+exports.sendCancelationEmail = onRequest(async (req, res) => {
+    corsHandler(req, res, async () => {
+        if (req.method !== 'POST') {
+            res.status(405).send('Method Not Allowed');
+            return;
+        }
+
+        const {senderName, subject, message, email: recipientEmail} = req.body;
+
+        // Validate required fields
+        if (!senderName || !subject || !message || !recipientEmail) {
+            res.status(400).send('Bad Request: Missing senderName, subject, message, email.');
+            return;
+        }
+
+        try {
+
+            // Set up mail options with the QR code attached and embedded in HTML
+            const mailOptions = {
+                from: `${senderName} <${gmailEmail}>`,
+                to: recipientEmail,
+                subject: subject,
+                html: '<p>' + message + '</p>'
+            };
+
+            // Send the email
+            await transporter.sendMail(mailOptions);
+            logger.info('Email sent successfully.');
         } catch (error) {
             logger.error('Error sending email or generating PDF:', error);
             res.status(500).send('Error sending email or generating PDF');
@@ -251,14 +262,11 @@ exports.sendEmails = onRequest((req, res) => {
             const randomToken = uuidv4();  // Generate a random token
 
             const [file] = await bucket.upload(qrCodeFilePath, {
-                destination: `qrCodes/${recipientEmail}_qrcode.png`,
-                metadata: {
-                    contentType: 'image/png',
-                    metadata: {
+                destination: `qrCodes/${recipientEmail}_qrcode.png`, metadata: {
+                    contentType: 'image/png', metadata: {
                         firebaseStorageDownloadTokens: randomToken,  // Attach random token to the file
                     },
-                },
-                predefinedAcl: 'publicRead',  // Make the file publicly readable
+                }, predefinedAcl: 'publicRead',  // Make the file publicly readable
             });
 
             // Construct the public URL with the token
@@ -274,10 +282,7 @@ exports.sendEmails = onRequest((req, res) => {
 
             // Set up mail options with the QR code attached and embedded in HTML
             const mailOptions = {
-                from: `${senderName} <${gmailEmail}>`,
-                to: recipientEmail,
-                subject: subject,
-                html: `<html lang="en">
+                from: `${senderName} <${gmailEmail}>`, to: recipientEmail, subject: subject, html: `<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -290,7 +295,7 @@ exports.sendEmails = onRequest((req, res) => {
 <div style="padding: 36px; text-align: center; background: url('https://firebasestorage.googleapis.com/v0/b/oozf-aaff4.appspot.com/o/WhatsApp%20Image%202024-10-07%20at%2023.13.18_32ed0e9b.jpg?alt=media&token=bcf9f30b-f443-4b44-afb9-5907b4d1e019') no-repeat center center; background-size: cover; color: white; border-radius: 10px; width: 90%; max-width: 600px;">
     <h2>Masaood Stars Awards</h2>
     <p>@ Abu Dhabi, ADNEC, Hall 11, Parking B</p>
-    <p>Doors open at 2:15pm, Program starts at 3:00pm</p>
+    <p>Doors open at 2:15pm, Program Starts at 3:00pm</p>
     <p>Dress code: Smart Business and Modest.</p>
     <p>Sunday 10 November 2024</p>
     <div style="background-color: #ffffff; color: #000000; padding: 10px; margin-top: 20px; border-radius: 5px;">
@@ -301,14 +306,9 @@ exports.sendEmails = onRequest((req, res) => {
     </div>
 </div>
 </body>
-</html>`,
-                attachments: [
-                    {
-                        filename: 'qrcode.png',
-                        content: qrCodeBuffer,
-                        cid: 'qrcode', // same cid as in the HTML content above
-                    },
-                ],
+</html>`, attachments: [{
+                    filename: 'qrcode.png', content: qrCodeBuffer, cid: 'qrcode', // same cid as in the HTML content above
+                },],
             };
 
             // Send the email
@@ -327,7 +327,7 @@ exports.convertHtmlToPdf = onRequest({
     timeoutSeconds: 120,  // Increase the timeout if needed
 }, async (req, res) => {
     corsHandler(req, res, async () => {
-        const { email, message, userName } = req.body;
+        const {email, message, userName} = req.body;
 
         if (!email || !message || !userName) {
             return res.status(400).send("Missing required parameters: email, message, or userName");
@@ -347,14 +347,11 @@ exports.convertHtmlToPdf = onRequest({
             const qrCodeToken = uuidv4();  // Generate a random token for QR code
 
             const [qrCodeFile] = await bucket.upload(qrCodeFilePath, {
-                destination: `qrCodes/${email}_qrcode.png`,
-                metadata: {
-                    contentType: 'image/png',
-                    metadata: {
+                destination: `qrCodes/${email}_qrcode.png`, metadata: {
+                    contentType: 'image/png', metadata: {
                         firebaseStorageDownloadTokens: qrCodeToken,  // Attach random token to the file
                     },
-                },
-                predefinedAcl: 'publicRead',  // Make the file publicly readable
+                }, predefinedAcl: 'publicRead',  // Make the file publicly readable
             });
 
             // Construct the public URL for QR code
@@ -388,26 +385,20 @@ exports.convertHtmlToPdf = onRequest({
 
             // Launch Puppeteer using chrome-aws-lambda
             const browser = await puppeteer.launch({
-                args: chrome.args,
-                executablePath: await chrome.executablePath,
-                headless: chrome.headless,
+                args: chrome.args, executablePath: await chrome.executablePath, headless: chrome.headless,
             });
 
             const page = await browser.newPage();
 
             // Set the HTML content for the PDF
-            await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+            await page.setContent(htmlContent, {waitUntil: 'networkidle0'});
 
             // Generate the PDF as a buffer
             const pdfBuffer = await page.pdf({
                 width: '19cm',     // Fixed width (A4 width)
                 height: '19cm',    // Fixed height (A4 height)
-                printBackground: true,
-                margin: {
-                    top: '1cm',
-                    right: '1cm',
-                    bottom: '1cm',
-                    left: '1cm',
+                printBackground: true, margin: {
+                    top: '1cm', right: '1cm', bottom: '1cm', left: '1cm',
                 },
             });
 
@@ -420,14 +411,11 @@ exports.convertHtmlToPdf = onRequest({
             // Upload the PDF to Firebase Storage
             const pdfToken = uuidv4();  // Generate a random token for the PDF file
             const [pdfFile] = await bucket.upload(pdfFilePath, {
-                destination: `pdfs/${email}_invitation.pdf`,
-                metadata: {
-                    contentType: 'application/pdf',
-                    metadata: {
+                destination: `pdfs/${email}_invitation.pdf`, metadata: {
+                    contentType: 'application/pdf', metadata: {
                         firebaseStorageDownloadTokens: pdfToken,  // Attach random token to the file
                     },
-                },
-                predefinedAcl: 'publicRead',  // Make the file publicly readable
+                }, predefinedAcl: 'publicRead',  // Make the file publicly readable
             });
 
             // Construct the public URL for the PDF
