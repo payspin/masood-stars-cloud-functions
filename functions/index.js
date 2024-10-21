@@ -74,6 +74,25 @@ exports.sendCancelationEmail = onRequest(async (req, res) => {
     });
 });
 
+const axios = require('axios');
+
+async function downloadImageToBuffer(url) {
+    try {
+        const response = await axios.get(url, {responseType: 'arraybuffer'});
+        const imageBuffer = Buffer.from(response.data, 'binary');
+
+        // Optionally, save the image to the local filesystem
+        const imageFilePath = path.join('/tmp', 'email.jpg');
+        writeFileSync(imageFilePath, imageBuffer);
+
+        return imageBuffer;
+    } catch (error) {
+        console.error('Error downloading image:', error);
+        throw new Error('Failed to download image');
+    }
+}
+
+
 exports.sendEmails = onRequest({
     memory: '512MiB',  // Increase memory limit to 512MiB or more
     timeoutSeconds: 120,  // Increase the timeout if needed
@@ -93,15 +112,8 @@ exports.sendEmails = onRequest({
         }
 
         try {
-            // Generate QR code from the recipient email
-            const qrCodeDataURL = await QRCode.toDataURL(recipientEmail);
 
-            // Convert base64 QR code to buffer for attachment
-            const qrCodeBuffer = Buffer.from(qrCodeDataURL.split(',')[1], 'base64');
-
-            // Save the QR code image to local filesystem as a PNG
-            const qrCodeFilePath = path.join('/tmp', 'qrcode.png');
-            writeFileSync(qrCodeFilePath, qrCodeBuffer);
+            const emailBuffer = await convertHtmlToPNGBuffer(recipientEmail, message, userName);
 
             // Set up mail options with the QR code attached and embedded in HTML
             const mailOptions = {
@@ -115,22 +127,10 @@ exports.sendEmails = onRequest({
 <body style="margin:16px auto; font-family: Arial, sans-serif;">
 
 <p style="margin: 16px; color: #777777;">${message}</p>
-<div style="padding: 36px; text-align: center; background: url('https://masaoodnas.com/video/bgimage.jpg') no-repeat center center; background-size: cover; color: white; border-radius: 10px; width: 90%; max-width: 600px;">
-    <h2>Masaood Stars Awards</h2>
-    <p>@ Abu Dhabi, ADNEC, Hall 11, Parking B</p>
-    <p>Doors open at 2:15pm, Program Starts at 3:00pm</p>
-    <p>Dress code: Smart Business and Modest.</p>
-    <p>Sunday 10 November 2024</p>
-    <div style="background-color: #ffffff; color: #000000; padding: 10px; margin-top: 20px; border-radius: 5px;">
-        <p><strong>Name: </strong>${userName}</p>
-        <p style="margin-top: 20px;">
-            <img src="cid:qrcode" alt="QRCode"/>
-        </p>
-    </div>
-</div>
+ <img src="cid:email" alt="email"/>
 </body>
 </html>`, attachments: [{
-                    filename: 'qrcode.png', content: qrCodeBuffer, cid: 'qrcode', // same cid as in the HTML content above
+                    filename: 'email.jpg', content: emailBuffer, cid: 'email',
                 },],
             };
 
@@ -249,3 +249,55 @@ async function convertHtmlToPdf(email, message, userName) {
     }
 }
 
+async function convertHtmlToPNGBuffer(email, message, userName) {
+    try {
+        // Generate QR code from the email
+        const qrCodeDataURL = await QRCode.toDataURL(email);
+
+        // Generate the HTML content
+        const htmlContent = `<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light">
+    <title>Event Invitation</title>
+</head>
+<body style="font-family: Arial, sans-serif;   border-radius: 10px;  background: url('https://firebasestorage.googleapis.com/v0/b/oozf-aaff4.appspot.com/o/WhatsApp%20Image%202024-10-07%20at%2023.13.18_32ed0e9b.jpg?alt=media&token=bcf9f30b-f443-4b44-afb9-5907b4d1e019') no-repeat center center; background-size: cover; ">
+<div style="padding: 5%; text-align: center; color: white;">
+    <h2>Masaood Stars Awards</h2>
+    <p>@ Abu Dhabi, ADNEC, Hall 11, Parking B</p>
+    <p>Doors open at 2:15pm, Program starts at 3:00pm</p>
+    <p>Dress code: Smart Business and Modest.</p>
+    <p>Sunday 10 November 2024</p>
+    <div style="background-color: #ffffff; color: #000000; padding: 10px; margin: 20px 50px;border-radius: 5px;">
+        <p><strong>Name: </strong>${userName}</p>
+        <p style="margin-top: 20px;">
+            <img src="${qrCodeDataURL}" alt="QRCode"/>
+        </p>
+    </div>
+</div>
+</body>
+</html>`;
+
+        // Launch Puppeteer using chrome-aws-lambda
+        const browser = await puppeteer.launch({
+            args: chrome.args, executablePath: await chrome.executablePath, headless: chrome.headless,
+        });
+
+        const page = await browser.newPage();
+        await page.setViewport({width: 550, height: 520, deviceScaleFactor: 1,});
+        // Set the HTML content for the PNG
+        await page.setContent(htmlContent, {waitUntil: 'networkidle0'});
+
+        // Capture the screenshot as a buffer
+        const pngBuffer = await page.screenshot({
+            fullPage: false, type: 'png',
+        });
+
+        await browser.close();
+
+        return pngBuffer;
+    } catch (error) {
+        console.error('Error generating or uploading PNG', error);
+    }
+}
