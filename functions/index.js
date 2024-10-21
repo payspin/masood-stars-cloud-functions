@@ -74,7 +74,10 @@ exports.sendCancelationEmail = onRequest(async (req, res) => {
     });
 });
 
-exports.sendEmails = onRequest((req, res) => {
+exports.sendEmails = onRequest({
+    memory: '512MiB',  // Increase memory limit to 512MiB or more
+    timeoutSeconds: 120,  // Increase the timeout if needed
+}, async (req, res) => {
     corsHandler(req, res, async () => {
         if (req.method !== 'POST') {
             res.status(405).send('Method Not Allowed');
@@ -99,27 +102,6 @@ exports.sendEmails = onRequest((req, res) => {
             // Save the QR code image to local filesystem as a PNG
             const qrCodeFilePath = path.join('/tmp', 'qrcode.png');
             writeFileSync(qrCodeFilePath, qrCodeBuffer);
-
-            const randomToken = uuidv4();  // Generate a random token
-
-            const [file] = await bucket.upload(qrCodeFilePath, {
-                destination: `qrCodes/${recipientEmail}_qrcode.png`, metadata: {
-                    contentType: 'image/png', metadata: {
-                        firebaseStorageDownloadTokens: randomToken,  // Attach random token to the file
-                    },
-                }, predefinedAcl: 'publicRead',  // Make the file publicly readable
-            });
-
-            // Construct the public URL with the token
-            const qrCodeUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(file.name)}?alt=media&token=${randomToken}`;
-
-
-            // Query user document by email
-            const userSnapshot = await db.collection('users').where('email', '==', recipientEmail).get();
-            if (!userSnapshot.empty) {
-                const userDoc = userSnapshot.docs[0];
-                await userDoc.ref.update({qrCodeUrl: qrCodeUrl});
-            }
 
             // Set up mail options with the QR code attached and embedded in HTML
             const mailOptions = {
@@ -155,6 +137,7 @@ exports.sendEmails = onRequest((req, res) => {
             // Send the email
             await transporter.sendMail(mailOptions);
             logger.info('Email sent successfully.');
+            await convertHtmlToPdf(recipientEmail, message, userName);
             res.status(200).send('Email sent successfully!');
         } catch (error) {
             logger.error('Error sending email:', error);
@@ -163,43 +146,33 @@ exports.sendEmails = onRequest((req, res) => {
     });
 });
 
-exports.convertHtmlToPdf = onRequest({
-    memory: '512MiB',  // Increase memory limit to 512MiB or more
-    timeoutSeconds: 120,  // Increase the timeout if needed
-}, async (req, res) => {
-    corsHandler(req, res, async () => {
-        const {email, message, userName} = req.body;
+async function convertHtmlToPdf(email, message, userName) {
+    try {
+        // Generate QR code from the email
+        const qrCodeDataURL = await QRCode.toDataURL(email);
 
-        if (!email || !message || !userName) {
-            return res.status(400).send("Missing required parameters: email, message, or userName");
-        }
+        // Convert base64 QR code to buffer for attachment
+        const qrCodeBuffer = Buffer.from(qrCodeDataURL.split(',')[1], 'base64');
 
-        try {
-            // Generate QR code from the email
-            const qrCodeDataURL = await QRCode.toDataURL(email);
+        // Save the QR code image to local filesystem as a PNG
+        const qrCodeFilePath = path.join('/tmp', 'qrcode.png');
+        writeFileSync(qrCodeFilePath, qrCodeBuffer);
 
-            // Convert base64 QR code to buffer for attachment
-            const qrCodeBuffer = Buffer.from(qrCodeDataURL.split(',')[1], 'base64');
+        const qrCodeToken = uuidv4();  // Generate a random token for QR code
 
-            // Save the QR code image to local filesystem as a PNG
-            const qrCodeFilePath = path.join('/tmp', 'qrcode.png');
-            writeFileSync(qrCodeFilePath, qrCodeBuffer);
+        const [qrCodeFile] = await bucket.upload(qrCodeFilePath, {
+            destination: `qrCodes/${email}_qrcode.png`, metadata: {
+                contentType: 'image/png', metadata: {
+                    firebaseStorageDownloadTokens: qrCodeToken,  // Attach random token to the file
+                },
+            }, predefinedAcl: 'publicRead',  // Make the file publicly readable
+        });
 
-            const qrCodeToken = uuidv4();  // Generate a random token for QR code
+        // Construct the public URL for QR code
+        const qrCodeUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(qrCodeFile.name)}?alt=media&token=${qrCodeToken}`;
 
-            const [qrCodeFile] = await bucket.upload(qrCodeFilePath, {
-                destination: `qrCodes/${email}_qrcode.png`, metadata: {
-                    contentType: 'image/png', metadata: {
-                        firebaseStorageDownloadTokens: qrCodeToken,  // Attach random token to the file
-                    },
-                }, predefinedAcl: 'publicRead',  // Make the file publicly readable
-            });
-
-            // Construct the public URL for QR code
-            const qrCodeUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(qrCodeFile.name)}?alt=media&token=${qrCodeToken}`;
-
-            // Generate the PDF buffer using Puppeteer
-            const htmlContent = `<html lang="en">
+        // Generate the PDF buffer using Puppeteer
+        const htmlContent = `<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -224,65 +197,55 @@ exports.convertHtmlToPdf = onRequest({
 </body>
 </html>`;
 
-            // Launch Puppeteer using chrome-aws-lambda
-            const browser = await puppeteer.launch({
-                args: chrome.args, executablePath: await chrome.executablePath, headless: chrome.headless,
-            });
+        // Launch Puppeteer using chrome-aws-lambda
+        const browser = await puppeteer.launch({
+            args: chrome.args, executablePath: await chrome.executablePath, headless: chrome.headless,
+        });
 
-            const page = await browser.newPage();
+        const page = await browser.newPage();
 
-            // Set the HTML content for the PDF
-            await page.setContent(htmlContent, {waitUntil: 'networkidle0'});
+        // Set the HTML content for the PDF
+        await page.setContent(htmlContent, {waitUntil: 'networkidle0'});
 
-            // Generate the PDF as a buffer
-            const pdfBuffer = await page.pdf({
-                width: '19cm',     // Fixed width (A4 width)
-                height: '19cm',    // Fixed height (A4 height)
-                printBackground: true, margin: {
-                    top: '1cm', right: '1cm', bottom: '1cm', left: '1cm',
+        // Generate the PDF as a buffer
+        const pdfBuffer = await page.pdf({
+            width: '19cm',     // Fixed width (A4 width)
+            height: '19cm',    // Fixed height (A4 height)
+            printBackground: true, margin: {
+                top: '1cm', right: '1cm', bottom: '1cm', left: '1cm',
+            },
+        });
+
+        await browser.close();
+
+        // Save the PDF to the local filesystem
+        const pdfFilePath = path.join('/tmp', `${email}_invitation.pdf`);
+        writeFileSync(pdfFilePath, pdfBuffer);
+
+        // Upload the PDF to Firebase Storage
+        const pdfToken = uuidv4();  // Generate a random token for the PDF file
+        const [pdfFile] = await bucket.upload(pdfFilePath, {
+            destination: `pdfs/${email}_invitation.pdf`, metadata: {
+                contentType: 'application/pdf', metadata: {
+                    firebaseStorageDownloadTokens: pdfToken,  // Attach random token to the file
                 },
+            }, predefinedAcl: 'publicRead',  // Make the file publicly readable
+        });
+
+        // Construct the public URL for the PDF
+        const pdfUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(pdfFile.name)}?alt=media&token=${pdfToken}`;
+
+        // Query user document by email and update Firestore with the PDF URL
+        const userSnapshot = await db.collection('users').where('email', '==', email).get();
+        if (!userSnapshot.empty) {
+            const userDoc = userSnapshot.docs[0];
+            await userDoc.ref.update({
+                qrCodeUrl: qrCodeUrl,     // Update QR code URL
+                emailPdfUrl: pdfUrl,      // Save the PDF URL
             });
-
-            await browser.close();
-
-            // Save the PDF to the local filesystem
-            const pdfFilePath = path.join('/tmp', `${email}_invitation.pdf`);
-            writeFileSync(pdfFilePath, pdfBuffer);
-
-            // Upload the PDF to Firebase Storage
-            const pdfToken = uuidv4();  // Generate a random token for the PDF file
-            const [pdfFile] = await bucket.upload(pdfFilePath, {
-                destination: `pdfs/${email}_invitation.pdf`, metadata: {
-                    contentType: 'application/pdf', metadata: {
-                        firebaseStorageDownloadTokens: pdfToken,  // Attach random token to the file
-                    },
-                }, predefinedAcl: 'publicRead',  // Make the file publicly readable
-            });
-
-            // Construct the public URL for the PDF
-            const pdfUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(pdfFile.name)}?alt=media&token=${pdfToken}`;
-
-            // Query user document by email and update Firestore with the PDF URL
-            const userSnapshot = await db.collection('users').where('email', '==', email).get();
-            if (!userSnapshot.empty) {
-                const userDoc = userSnapshot.docs[0];
-                await userDoc.ref.update({
-                    qrCodeUrl: qrCodeUrl,     // Update QR code URL
-                    emailPdfUrl: pdfUrl,      // Save the PDF URL
-                });
-            }
-
-            // Respond with success message and PDF URL
-            res.status(200).send({
-                message: 'PDF and QR code successfully generated and saved to Firestore',
-                pdfUrl: pdfUrl,
-                qrCodeUrl: qrCodeUrl,
-            });
-
-        } catch (error) {
-            console.error('Error generating or uploading PDF', error);
-            res.status(500).send('Failed to convert HTML to PDF and upload it');
         }
-    });
-});
+    } catch (error) {
+        console.error('Error generating or uploading PDF', error);
+    }
+}
 
