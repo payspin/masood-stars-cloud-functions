@@ -33,7 +33,11 @@ const transporter = nodemailer.createTransport({
     },
 });
 
-exports.sendCancelationEmail = onRequest(async (req, res) => {
+
+exports.sendCancelationEmail = onRequest({
+    memory: '1GiB',  // Increase the memory if needed
+    timeoutSeconds: 500,  // Increase the timeout if needed
+}, async (req, res) => {
     corsHandler(req, res, async () => {
         if (req.method !== 'POST') {
             res.status(405).send('Method Not Allowed');
@@ -74,28 +78,42 @@ exports.sendCancelationEmail = onRequest(async (req, res) => {
     });
 });
 
-const axios = require('axios');
+exports.reGenerateEmails = onRequest({
+    memory: '8GiB',  // Increase the memory if needed
+    timeoutSeconds: 3600,  // Increase the timeout if needed
+}, async (req, res) => {
+    corsHandler(req, res, async () => {
+        const usersSnapshot = await db.collection('users').get();
+        if (usersSnapshot.empty) {
+            console.log('No users found.');
+            return res.status(200).send('No users found.');
+        }
 
-async function downloadImageToBuffer(url) {
-    try {
-        const response = await axios.get(url, {responseType: 'arraybuffer'});
-        const imageBuffer = Buffer.from(response.data, 'binary');
+        var eMailsSend = 0;
+        for (const doc of usersSnapshot.docs) {
+            const userData = doc.data();
+            const {email, display_name, emailPdfUrl, qrCodeUrl} = userData;
 
-        // Optionally, save the image to the local filesystem
-        const imageFilePath = path.join('/tmp', 'email.jpg');
-        writeFileSync(imageFilePath, imageBuffer);
+            if (!emailPdfUrl || !qrCodeUrl) {
+                const message = 'Thank you for signing up to attend our upcoming Masaood Stars Ceremony & Union Day Celebration. The event is taking place on Sunday 10 November 2024 at ADNEC, Hall 11. Use Parking B. Doors open at 2:15pm and the show starts at 3:00pm sharp until 8:00pm. Food will be served at 5:00pm. This event is for Al Masaood Employees ONLY. Family & friends will not be permitted. Please show your QR code at the door.';
 
-        return imageBuffer;
-    } catch (error) {
-        console.error('Error downloading image:', error);
-        throw new Error('Failed to download image');
-    }
-}
+                await convertHtmlToPdf(email, message, display_name);
 
+                logger.info('Email sent successfully.' + email);
+                console.info('Email sent successfully.' + email);
+                eMailsSend = eMailsSend + 1;
+            }
+        }
+        if (eMailsSend === 0) {
+            return res.status(200).send('No emails sent.');
+        }
+       return res.status(200).send(eMailsSend);
+    });
+});
 
 exports.sendEmails = onRequest({
-    memory: '512MiB',  // Increase memory limit to 512MiB or more
-    timeoutSeconds: 120,  // Increase the timeout if needed
+    memory: '1GiB',  // Increase the memory if needed
+    timeoutSeconds: 500,  // Increase the timeout if needed
 }, async (req, res) => {
     corsHandler(req, res, async () => {
         if (req.method !== 'POST') {
@@ -322,3 +340,44 @@ async function curveImageBuffer(imageBuffer) {
         }])
         .toBuffer();
 }
+
+const {onDocumentCreated} = require('firebase-functions/v2/firestore');
+exports.checkUserCountAndAddItem = onDocumentCreated('users/{docId}', async (event) => {
+    try {
+        // Get the count of documents in the users collection
+        const usersSnapshot = await db.collection('users').get();
+        const userCount = usersSnapshot.size;
+
+        logger.info('userCount = ' + userCount);
+        if (userCount >= 1310) {
+            // Delete the new item if user count is 1310
+            await db.collection('users').doc(event.data.id).delete().then(() => {
+                logger.info('New item deleted because user count is.' + userCount);
+            });
+            logger.info('New item deleted because user count is 1310.');
+        } else {
+            logger.info('New item added because user count is less than 1310.');
+        }
+    } catch (error) {
+        logger.error('Error checking user count or deleting new item:', error);
+    }
+});
+
+exports.checTestCollection = onDocumentCreated('testCollection/{docId}', async (event) => {
+    try {
+        // Get the count of documents in the users collection
+        const usersSnapshot = await db.collection('testCollection').get();
+        const userCount = usersSnapshot.size;
+        logger.info('New item id = .' + event.data.id);
+        if (userCount >= 3) {
+            // Delete the new item if user count is 1310
+            await db.collection('testCollection').doc(event.data.id).delete().then(() => {
+                logger.info('New item deleted because user count is.' + userCount);
+            });
+        } else {
+            logger.info('New item added because user count is less than.' + userCount);
+        }
+    } catch (error) {
+        logger.error('Error checking user count or deleting new item:', error);
+    }
+});
