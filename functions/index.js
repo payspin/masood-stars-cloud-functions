@@ -113,7 +113,7 @@ exports.sendEmails = onRequest({
 
         try {
 
-            const emailBuffer = await convertHtmlToPNGBuffer(recipientEmail, message, userName);
+            const emailBuffer = await curveImageBuffer(await convertHtmlToPNGBuffer(recipientEmail, message, userName));
 
             // Set up mail options with the QR code attached and embedded in HTML
             const mailOptions = {
@@ -300,4 +300,25 @@ async function convertHtmlToPNGBuffer(email, message, userName) {
     } catch (error) {
         console.error('Error generating or uploading PNG', error);
     }
+}
+
+const sharp = require('sharp');
+
+async function curveImageBuffer(imageBuffer) {
+    const {width, height} = await sharp(imageBuffer).metadata(); // Get image dimensions
+
+    // Create a rounded rectangle SVG mask with 10px radius
+    const roundedCorners = Buffer.from(`
+    <svg>
+      <rect x="0" y="0" width="${width}" height="${height}" rx="10" ry="10"/>
+    </svg>
+  `);
+
+    // Apply the rounded corners mask using sharp
+     // Return as buffer
+    return await sharp(imageBuffer)
+        .composite([{
+            input: roundedCorners, blend: 'dest-in'
+        }])
+        .toBuffer();
 }
