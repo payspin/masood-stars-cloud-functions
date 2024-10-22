@@ -183,7 +183,7 @@ async function convertHtmlToPdf(email, message, userName) {
 <p style="margin: 16px; color: #777777;">${message}</p>
 <div style="padding: 36px; text-align: center; background: url('https://firebasestorage.googleapis.com/v0/b/oozf-aaff4.appspot.com/o/WhatsApp%20Image%202024-10-07%20at%2023.13.18_32ed0e9b.jpg?alt=media&token=bcf9f30b-f443-4b44-afb9-5907b4d1e019') no-repeat center center; background-size: cover; color: white; border-radius: 10px; width: 90%; max-width: 600px;">
     <h2>Masaood Stars Awards</h2>
-    <p>@ Abu Dhabi, ADNEC, Hall 11, Parking B</p>
+    <p>Abu Dhabi, ADNEC, Hall 11, Parking B</p>
     <p>Doors open at 2:15pm, Program starts at 3:00pm</p>
     <p>Dress code: Smart Business and Modest.</p>
     <p>Sunday 10 November 2024</p>
@@ -265,7 +265,7 @@ async function convertHtmlToPNGBuffer(email, message, userName) {
 <body style="font-family: Arial, sans-serif;   border-radius: 10px;  background: url('https://firebasestorage.googleapis.com/v0/b/oozf-aaff4.appspot.com/o/WhatsApp%20Image%202024-10-07%20at%2023.13.18_32ed0e9b.jpg?alt=media&token=bcf9f30b-f443-4b44-afb9-5907b4d1e019') no-repeat center center; background-size: cover; ">
 <div style="padding: 5%; text-align: center; color: white;">
     <h2>Masaood Stars Awards</h2>
-    <p>@ Abu Dhabi, ADNEC, Hall 11, Parking B</p>
+    <p>Abu Dhabi, ADNEC, Hall 11, Parking B</p>
     <p>Doors open at 2:15pm, Program starts at 3:00pm</p>
     <p>Dress code: Smart Business and Modest.</p>
     <p>Sunday 10 November 2024</p>
