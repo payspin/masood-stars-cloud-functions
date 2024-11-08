@@ -89,7 +89,7 @@ exports.reGenerateEmails = onRequest({
             return res.status(200).send('No users found.');
         }
 
-        var eMailsSend = 0;
+        var eMailsSend = [];
         for (const doc of usersSnapshot.docs) {
             const userData = doc.data();
             const {email, display_name, emailPdfUrl, qrCodeUrl} = userData;
@@ -101,18 +101,20 @@ exports.reGenerateEmails = onRequest({
 
                 logger.info('Email sent successfully.' + email);
                 console.info('Email sent successfully.' + email);
-                eMailsSend = eMailsSend + 1;
+                eMailsSend.push(email);
             }
         }
-        if (eMailsSend === 0) {
-            return res.status(200).send('No emails sent.');
+        if (eMailsSend.length === 0) {
+            return res.status(200).send('No emails Generated.');
         }
-       return res.status(200).send(eMailsSend);
+        return res.status(200).send({
+            message: 'Emails Generated successfully', emails: eMailsSend
+        });
     });
 });
 
 exports.sendEmails = onRequest({
-    memory: '1GiB',  // Increase the memory if needed
+    memory: '2GiB',  // Increase the memory if needed
     timeoutSeconds: 500,  // Increase the timeout if needed
 }, async (req, res) => {
     corsHandler(req, res, async () => {
@@ -349,14 +351,14 @@ exports.checkUserCountAndAddItem = onDocumentCreated('users/{docId}', async (eve
         const userCount = usersSnapshot.size;
 
         logger.info('userCount = ' + userCount);
-        if (userCount >= 1310) {
+        if (userCount >= 1300) {
             // Delete the new item if user count is 1310
             await db.collection('users').doc(event.data.id).delete().then(() => {
                 logger.info('New item deleted because user count is.' + userCount);
             });
-            logger.info('New item deleted because user count is 1310.');
+            logger.info('New item deleted because user count is 1300.');
         } else {
-            logger.info('New item added because user count is less than 1310.');
+            logger.info('New item added because user count is less than 1300.');
         }
     } catch (error) {
         logger.error('Error checking user count or deleting new item:', error);
