@@ -24,7 +24,7 @@ const db = getFirestore();
 
 // Gmail credentials
 const gmailEmail = 'noreply@masaoodstarsevent.com';
-const gmailPassword = 'vbwj vjhr wmor wkpo';
+const gmailPassword = 'abjd xmux vijf omrd';
 
 // Create a transporter object using nodemailer
 const transporter = nodemailer.createTransport({
