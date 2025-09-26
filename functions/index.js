@@ -295,7 +295,7 @@ async function convertHtmlToPNGBuffer(email, message, userName) {
             <p style="margin: 8px 0; font-size: 18px; font-weight: 500;">VOGO ABU DHABI GOLF RESORT HOTEL</p>
             <p style="margin: 8px 0; font-size: 16px;">Doors open at 5:00PM</p>
             <p style="margin: 8px 0; font-size: 16px;">Dress-code: Casual, Please wear comfortable shoes</p>
-            <p style="margin: 8px 0; font-size: 18px; font-weight: 500;">Tuesday 25 NOVEMBER</p>
+            <p style="margin: 8px 0; font-size: 18px; font-weight: 500;">Tuesday 25 November 2025</p>
         </div>
         
         <!-- QR Code and Name Section -->
