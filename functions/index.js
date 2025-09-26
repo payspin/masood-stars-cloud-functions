@@ -287,20 +287,25 @@ async function convertHtmlToPNGBuffer(email, message, userName) {
     <meta name="color-scheme" content="light">
     <title>Event Invitation</title>
 </head>
-<body style="font-family: Arial, sans-serif;   border-radius: 10px;  background: url('https://firebasestorage.googleapis.com/v0/b/oozf-aaff4.appspot.com/o/qr.jpg?alt=media&token=95e90d51-e5a4-43ba-a79f-7bd35393461b') no-repeat center center; background-size: cover; ">
-<div style="padding: 5%; text-align: center; color: white;">
-    <h2>Masaood National Day</h2>
-    <p>VOGO ABU DHABI GOLF RESORT HOTEL</p>
-    <p>Doors open at 5:00PM</p>
-    <p>Dress-code: Casual, Please wear comfortable shoes</p>
-    <p>Tuesday 25 NOVEMBER</p>
-    <div style="background-color: #ffffff; color: #000000; padding: 10px; margin: 20px 50px;border-radius: 5px;">
-        <p><strong>Name: </strong>${userName}</p>
-        <p style="margin-top: 20px;">
-            <img src="${qrCodeDataURL}" alt="QRCode"/>
-        </p>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; width: 795px; height: 1184px; background: url('https://firebasestorage.googleapis.com/v0/b/oozf-aaff4.appspot.com/o/qr.jpg?alt=media&token=95e90d51-e5a4-43ba-a79f-7bd35393461b') no-repeat top left; background-size: 795px 1184px; position: relative;">
+    <!-- Content positioned with more space from the top -->
+    <div style="position: absolute; top: 60%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: white; width: 90%; max-width: 600px;">
+        <div style="margin-bottom: 30px;">
+            <h2 style="margin: 0 0 15px 0; font-size: 28px; font-weight: bold;">Masaood National Day</h2>
+            <p style="margin: 8px 0; font-size: 18px; font-weight: 500;">VOGO ABU DHABI GOLF RESORT HOTEL</p>
+            <p style="margin: 8px 0; font-size: 16px;">Doors open at 5:00PM</p>
+            <p style="margin: 8px 0; font-size: 16px;">Dress-code: Casual, Please wear comfortable shoes</p>
+            <p style="margin: 8px 0; font-size: 18px; font-weight: 500;">Tuesday 25 NOVEMBER</p>
+        </div>
+        
+        <!-- QR Code and Name Section -->
+        <div style="background-color: rgba(255, 255, 255, 0.95); color: #000000; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); margin: 30px 50px 0 50px;">
+            <p style="margin: 0 0 20px 0; font-size: 20px; font-weight: bold;">Name: ${userName}</p>
+            <div style="margin-top: 20px;">
+                <img src="${qrCodeDataURL}" alt="QRCode" style="width: 150px; height: 150px; border: 2px solid #ddd; border-radius: 8px;"/>
+            </div>
+        </div>
     </div>
-</div>
 </body>
 </html>`;
 
@@ -310,7 +315,7 @@ async function convertHtmlToPNGBuffer(email, message, userName) {
         });
 
         const page = await browser.newPage();
-        await page.setViewport({ width: 550, height: 520, deviceScaleFactor: 1, });
+        await page.setViewport({ width: 795, height: 1184, deviceScaleFactor: 1, });
         // Set the HTML content for the PNG
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
 
