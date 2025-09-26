@@ -1,21 +1,21 @@
-const {initializeApp} = require('firebase-admin/app');
-const {onRequest} = require('firebase-functions/v2/https');
+const { initializeApp } = require('firebase-admin/app');
+const { onRequest } = require('firebase-functions/v2/https');
 const logger = require('firebase-functions/logger');
 const cors = require('cors');
 const nodemailer = require('nodemailer');
 const QRCode = require('qrcode');
-const {writeFileSync} = require('fs');
+const { writeFileSync } = require('fs');
 const path = require("path");
-const {getStorage} = require("firebase-admin/storage");
-const {getFirestore} = require("firebase-admin/firestore");
-const {v4: uuidv4} = require('uuid');
+const { getStorage } = require("firebase-admin/storage");
+const { getFirestore } = require("firebase-admin/firestore");
+const { v4: uuidv4 } = require('uuid');
 const puppeteer = require('puppeteer-core');
 const chrome = require('chrome-aws-lambda');
 // Initialize Firebase app
 initializeApp();
 
 // Use CORS
-const corsHandler = cors({origin: true});
+const corsHandler = cors({ origin: true });
 
 // Upload QR code image and PDF to Firebase Storage
 const bucket = getStorage().bucket();
@@ -23,13 +23,18 @@ const bucket = getStorage().bucket();
 const db = getFirestore();
 
 // Gmail credentials
-const gmailEmail = 'noreply@masaoodstarsevent.com';
-const gmailPassword = 'abjd xmux vijf omrd';
+const gmailEmail = 'noreply@masaoodnationalday2025.com';
+const gmailPassword = 'rval zjis sokr bkjs';
 
 // Create a transporter object using nodemailer
 const transporter = nodemailer.createTransport({
-    service: 'gmail', host: 'smtp.gmail.com', port: 465, auth: {
-        user: gmailEmail, pass: gmailPassword,
+    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true, // Use SSLآ
+    auth: {
+        user: gmailEmail,
+        pass: gmailPassword,
     },
 });
 
@@ -44,7 +49,7 @@ exports.sendCancelationEmail = onRequest({
             return;
         }
 
-        const {senderName, subject, message, email: recipientEmail} = req.body;
+        const { senderName, subject, message, email: recipientEmail } = req.body;
 
         // Validate required fields
         if (!senderName || !subject || !message || !recipientEmail) {
@@ -92,10 +97,10 @@ exports.reGenerateEmails = onRequest({
         var eMailsSend = [];
         for (const doc of usersSnapshot.docs) {
             const userData = doc.data();
-            const {email, display_name, emailPdfUrl, qrCodeUrl} = userData;
+            const { email, display_name, emailPdfUrl, qrCodeUrl } = userData;
 
             if (!emailPdfUrl || !qrCodeUrl) {
-                const message = 'Thank you for signing up to attend our upcoming Masaood Stars Ceremony & Union Day Celebration. The event is taking place on Sunday 10 November 2024 at ADNEC, Hall 11. Use Parking B. Doors open at 2:15pm and the show starts at 3:00pm sharp until 8:00pm. Food will be served at 5:00pm. This event is for Al Masaood Employees ONLY. Family & friends will not be permitted. Please show your QR code at the door.';
+                const message = 'Thank you for signing up to attend our upcoming Masaood National Day Celebration. The event is taking place on Tuesday 25 November at VOGO ABU DHABI GOLF RESORT HOTEL. Doors open at 5:00PM. Dress-code: Casual, Please wear comfortable shoes. This event is for Al Masaood Employees ONLY. Family & friends will not be permitted. Please show your QR code at the door.';
 
                 await convertHtmlToPdf(email, message, display_name);
 
@@ -123,7 +128,7 @@ exports.sendEmails = onRequest({
             return;
         }
 
-        const {senderName, subject, message, email: recipientEmail, userName} = req.body;
+        const { senderName, subject, message, email: recipientEmail, userName } = req.body;
 
         // Validate required fields
         if (!senderName || !subject || !message || !recipientEmail) {
@@ -202,11 +207,11 @@ async function convertHtmlToPdf(email, message, userName) {
 <body style="margin:16px auto; font-family: Arial, sans-serif;">
 <p style="margin: 16px; color: #777777;">${message}</p>
 <div style="padding: 36px; text-align: center; background: url('https://firebasestorage.googleapis.com/v0/b/oozf-aaff4.appspot.com/o/WhatsApp%20Image%202024-10-07%20at%2023.13.18_32ed0e9b.jpg?alt=media&token=bcf9f30b-f443-4b44-afb9-5907b4d1e019') no-repeat center center; background-size: cover; color: white; border-radius: 10px; width: 90%; max-width: 600px;">
-    <h2>Masaood Stars Awards</h2>
-    <p>Abu Dhabi, ADNEC, Hall 11, Parking B</p>
-    <p>Doors open at 2:15pm, Program starts at 3:00pm</p>
-    <p>Dress code: Smart Business and Modest.</p>
-    <p>Sunday 10 November 2024</p>
+    <h2>Masaood National Day</h2>
+    <p>VOGO ABU DHABI GOLF RESORT HOTEL</p>
+    <p>Doors open at 5:00PM</p>
+    <p>Dress-code: Casual, Please wear comfortable shoes</p>
+    <p>Tuesday 25 NOVEMBER</p>
     <div style="background-color: #ffffff; color: #000000; padding: 10px; margin-top: 20px; border-radius: 5px;">
         <p><strong>Name: </strong>${userName}</p>
         <p style="margin-top: 20px;">
@@ -225,7 +230,7 @@ async function convertHtmlToPdf(email, message, userName) {
         const page = await browser.newPage();
 
         // Set the HTML content for the PDF
-        await page.setContent(htmlContent, {waitUntil: 'networkidle0'});
+        await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
 
         // Generate the PDF as a buffer
         const pdfBuffer = await page.pdf({
@@ -282,13 +287,13 @@ async function convertHtmlToPNGBuffer(email, message, userName) {
     <meta name="color-scheme" content="light">
     <title>Event Invitation</title>
 </head>
-<body style="font-family: Arial, sans-serif;   border-radius: 10px;  background: url('https://firebasestorage.googleapis.com/v0/b/oozf-aaff4.appspot.com/o/WhatsApp%20Image%202024-10-07%20at%2023.13.18_32ed0e9b.jpg?alt=media&token=bcf9f30b-f443-4b44-afb9-5907b4d1e019') no-repeat center center; background-size: cover; ">
+<body style="font-family: Arial, sans-serif;   border-radius: 10px;  background: url('https://firebasestorage.googleapis.com/v0/b/oozf-aaff4.appspot.com/o/qr.jpg?alt=media&token=95e90d51-e5a4-43ba-a79f-7bd35393461b') no-repeat center center; background-size: cover; ">
 <div style="padding: 5%; text-align: center; color: white;">
-    <h2>Masaood Stars Awards</h2>
-    <p>Abu Dhabi, ADNEC, Hall 11, Parking B</p>
-    <p>Doors open at 2:15pm, Program starts at 3:00pm</p>
-    <p>Dress code: Smart Business and Modest.</p>
-    <p>Sunday 10 November 2024</p>
+    <h2>Masaood National Day</h2>
+    <p>VOGO ABU DHABI GOLF RESORT HOTEL</p>
+    <p>Doors open at 5:00PM</p>
+    <p>Dress-code: Casual, Please wear comfortable shoes</p>
+    <p>Tuesday 25 NOVEMBER</p>
     <div style="background-color: #ffffff; color: #000000; padding: 10px; margin: 20px 50px;border-radius: 5px;">
         <p><strong>Name: </strong>${userName}</p>
         <p style="margin-top: 20px;">
@@ -305,9 +310,9 @@ async function convertHtmlToPNGBuffer(email, message, userName) {
         });
 
         const page = await browser.newPage();
-        await page.setViewport({width: 550, height: 520, deviceScaleFactor: 1,});
+        await page.setViewport({ width: 550, height: 520, deviceScaleFactor: 1, });
         // Set the HTML content for the PNG
-        await page.setContent(htmlContent, {waitUntil: 'networkidle0'});
+        await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
 
         // Capture the screenshot as a buffer
         const pngBuffer = await page.screenshot({
@@ -325,7 +330,7 @@ async function convertHtmlToPNGBuffer(email, message, userName) {
 const sharp = require('sharp');
 
 async function curveImageBuffer(imageBuffer) {
-    const {width, height} = await sharp(imageBuffer).metadata(); // Get image dimensions
+    const { width, height } = await sharp(imageBuffer).metadata(); // Get image dimensions
 
     // Create a rounded rectangle SVG mask with 10px radius
     const roundedCorners = Buffer.from(`
@@ -335,7 +340,7 @@ async function curveImageBuffer(imageBuffer) {
   `);
 
     // Apply the rounded corners mask using sharp
-     // Return as buffer
+    // Return as buffer
     return await sharp(imageBuffer)
         .composite([{
             input: roundedCorners, blend: 'dest-in'
@@ -343,7 +348,7 @@ async function curveImageBuffer(imageBuffer) {
         .toBuffer();
 }
 
-const {onDocumentCreated} = require('firebase-functions/v2/firestore');
+const { onDocumentCreated } = require('firebase-functions/v2/firestore');
 exports.checkUserCountAndAddItem = onDocumentCreated('users/{docId}', async (event) => {
     try {
         // Get the count of documents in the users collection
